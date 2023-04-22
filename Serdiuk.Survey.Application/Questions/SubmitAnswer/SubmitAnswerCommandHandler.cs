@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serdiuk.Survey.Application.Common.Interfaces;
+using Serdiuk.Survey.Domain;
 
 namespace Serdiuk.Survey.Application.Questions.SubmitAnswer
 {
@@ -17,8 +18,13 @@ namespace Serdiuk.Survey.Application.Questions.SubmitAnswer
         public async Task<Result> Handle(SubmitAnswerCommand request, CancellationToken cancellationToken)
         {
             var answer = await _context.Answers.FirstOrDefaultAsync(a => a.Id == request.AnswerId, cancellationToken);
+            var survey = _context.Surveys
+                .FirstOrDefault(s => s.Questions.Any(q => q.Answers.Any(a => a.Id == request.AnswerId)));
 
-            if(answer == null)
+            if (survey == null || survey.EndDate < DateTime.UtcNow)
+                return Result.Fail("Survey expired");
+
+            if (answer == null)
                 return Result.Fail("Answer not found, try again");
 
             answer.Apply();
